@@ -1,0 +1,57 @@
+version: "3"
+services:
+  db:
+    image: postgres:latest
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+
+  exporter:
+    image: bitnami/postgres-exporter
+    depends_on:
+      - db
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@db:5432/postgres?sslmode=disable
+    ports:
+      - "9187:9187"
+
+  prometheus:
+    image: bitnami/prometheus
+    volumes:
+      - ./data/prometheus:/bitnami/prometheus
+    ports:
+      - "9090:9090"
+    configs:
+      - source: prometheus_config
+        target: /opt/bitnami/prometheus/conf/prometheus.yml
+
+  alertmanager:
+    image: bitnami/alertmanager
+    volumes:
+      - ./data/alertmanager:/bitnami/alertmanager
+    ports:
+      - "9093:9093"
+    depends_on:
+      - prometheus
+
+  grafana:
+    image: grafana/grafana
+    user: "472:472"
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+configs:
+  prometheus_config:
+    file: ./prometheus.yml
+
